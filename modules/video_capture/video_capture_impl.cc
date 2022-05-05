@@ -96,12 +96,21 @@ VideoCaptureImpl::~VideoCaptureImpl() {
 void VideoCaptureImpl::RegisterCaptureDataCallback(
     rtc::VideoSinkInterface<VideoFrame>* dataCallBack) {
   MutexLock lock(&api_lock_);
+  RTC_DCHECK(!_rawDataCallBack);
   _dataCallBack = dataCallBack;
+}
+
+void VideoCaptureImpl::RegisterCaptureDataCallback(
+    RawVideoSinkInterface* dataCallBack) {
+  MutexLock lock(&api_lock_);
+  RTC_DCHECK(!_dataCallBack);
+  _rawDataCallBack = dataCallBack;
 }
 
 void VideoCaptureImpl::DeRegisterCaptureDataCallback() {
   MutexLock lock(&api_lock_);
   _dataCallBack = NULL;
+  _rawDataCallBack = NULL;
 }
 int32_t VideoCaptureImpl::DeliverCapturedFrame(VideoFrame& captureFrame) {
   UpdateFrameCount();  // frame count used for local frame rate callback.
@@ -111,6 +120,15 @@ int32_t VideoCaptureImpl::DeliverCapturedFrame(VideoFrame& captureFrame) {
   }
 
   return 0;
+}
+
+void VideoCaptureImpl::DeliverRawFrame(uint8_t* videoFrame,
+                                       size_t videoFrameLength,
+                                       const VideoCaptureCapability& frameInfo,
+                                       int64_t captureTime) {
+  UpdateFrameCount();
+  _rawDataCallBack->OnRawFrame(videoFrame, videoFrameLength, frameInfo,
+                               captureTime);
 }
 
 int32_t VideoCaptureImpl::IncomingFrame(uint8_t* videoFrame,
@@ -123,6 +141,11 @@ int32_t VideoCaptureImpl::IncomingFrame(uint8_t* videoFrame,
   const int32_t height = frameInfo.height;
 
   TRACE_EVENT1("webrtc", "VC::IncomingFrame", "capture_time", captureTime);
+
+  if (_rawDataCallBack) {
+    DeliverRawFrame(videoFrame, videoFrameLength, frameInfo, captureTime);
+    return 0;
+  }
 
   // Not encoded, convert to I420.
   if (frameInfo.videoType != VideoType::kMJPEG &&
