@@ -46,7 +46,7 @@ rtc_library("video_capture_module") {
   absl_deps = [ "//third_party/abseil-cpp/absl/strings" ]
 }
 
-if (!build_with_chromium) {
+if (true) {
   rtc_source_set("video_capture_internal_impl") {
     visibility = [ "*" ]
     deps = [
