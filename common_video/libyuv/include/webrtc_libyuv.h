@@ -37,6 +37,7 @@ enum class VideoType {
   kYUY2,
   kYV12,
   kUYVY,
+  kNV12,
   kMJPEG,
   kBGRA,
 };

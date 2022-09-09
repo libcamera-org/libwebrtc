@@ -30,7 +30,7 @@ struct {
   VideoType video_type;
 } constexpr kSupportedFormats[] = {
     {SPA_VIDEO_FORMAT_I420, VideoType::kI420},
-    {SPA_VIDEO_FORMAT_NV12, VideoType::kYV12},
+    {SPA_VIDEO_FORMAT_NV12, VideoType::kNV12},
     {SPA_VIDEO_FORMAT_YUY2, VideoType::kYUY2},
     {SPA_VIDEO_FORMAT_RGB, VideoType::kRGB24},
 };

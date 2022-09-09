@@ -35,7 +35,7 @@ VideoType PipewireRawFormatToVideoType(uint32_t id) {
     case SPA_VIDEO_FORMAT_I420:
       return VideoType::kI420;
     case SPA_VIDEO_FORMAT_NV12:
-      return VideoType::kYV12;
+      return VideoType::kNV12;
     case SPA_VIDEO_FORMAT_YUY2:
       return VideoType::kYUY2;
     case SPA_VIDEO_FORMAT_RGB:
