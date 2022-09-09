@@ -6,6 +6,7 @@
 # in the file PATENTS.  All contributing project authors may
 # be found in the AUTHORS file in the root of the source tree.
 
+import("//build/config/linux/pkg_config.gni")
 import("../../webrtc.gni")
 
 # Note this target is missing an implementation for the video capture.
@@ -17,6 +18,7 @@ rtc_library("video_capture_module") {
   sources = [
     "device_info_impl.cc",
     "device_info_impl.h",
+    "raw_video_sink_interface.h",
     "video_capture.h",
     "video_capture_config.h",
     "video_capture_defines.h",
@@ -24,7 +26,15 @@ rtc_library("video_capture_module") {
     "video_capture_factory.h",
     "video_capture_impl.cc",
     "video_capture_impl.h",
+    "video_capture_options.cc",
+    "video_capture_options.h",
   ]
+  if (rtc_use_pipewire) {
+    public_configs = [
+      ":pipewire_config",
+      ":pipewire",
+    ]
+  }
 
   deps = [
     "../../api:scoped_refptr",
@@ -45,7 +55,52 @@ rtc_library("video_capture_module") {
   absl_deps = [ "//third_party/abseil-cpp/absl/strings" ]
 }
 
-if (!build_with_chromium) {
+if (is_linux || is_chromeos) {
+  if (rtc_use_pipewire) {
+    pkg_config("gio") {
+      packages = [
+        "gio-2.0",
+        "gio-unix-2.0",
+      ]
+    }
+
+    pkg_config("pipewire") {
+      packages = [ "libpipewire-0.3" ]
+      if (!rtc_link_pipewire) {
+        ignore_libs = true
+      }
+    }
+
+    pkg_config("gbm") {
+      packages = [ "gbm" ]
+    }
+    pkg_config("egl") {
+      packages = [ "egl" ]
+    }
+    pkg_config("libdrm") {
+      packages = [ "libdrm" ]
+      if (!rtc_link_pipewire) {
+        ignore_libs = true
+      }
+    }
+
+    config("pipewire_config") {
+      defines = [ "WEBRTC_USE_PIPEWIRE" ]
+      if (!rtc_link_pipewire) {
+        defines += [ "WEBRTC_DLOPEN_PIPEWIRE" ]
+      }
+
+      # Chromecast build config overrides `WEBRTC_USE_PIPEWIRE` even when
+      # `rtc_use_pipewire` is not set, which causes pipewire_config to not be
+      # included in targets. More details in: webrtc:13898
+      if (is_linux && !is_chromecast) {
+        defines += [ "WEBRTC_USE_GIO" ]
+      }
+    }
+  }
+}
+
+if (true) {
   rtc_source_set("video_capture_internal_impl") {
     visibility = [ "*" ]
     deps = [
@@ -65,13 +120,27 @@ if (!build_with_chromium) {
     if (is_linux || is_chromeos) {
       sources = [
         "linux/device_info_linux.cc",
+        "linux/device_info_pipewire.cc",
+        "linux/device_info_pipewire.h",
         "linux/device_info_v4l2.cc",
         "linux/device_info_v4l2.h",
+        "linux/pipewire_session.cc",
+        "linux/pipewire_session.h",
         "linux/video_capture_linux.cc",
+        "linux/video_capture_pipewire.cc",
+        "linux/video_capture_pipewire.h",
         "linux/video_capture_v4l2.cc",
         "linux/video_capture_v4l2.h",
       ]
+      configs += [
+        ":gio",
+        ":pipewire",
+        ":gbm",
+        ":egl",
+        ":libdrm",
+      ]
       deps += [ "../../media:rtc_media_base" ]
+      public_configs = [ ":pipewire_config" ]
     }
     if (is_win) {
       sources = [
